@@ -45,10 +45,12 @@ if (params.help) {
     log.info '    --downsampling_prop            INTEGER        Proportion of reads that will be randomly selected from the BAM (between 1 and 100).'
     log.info '    --ref                          FILE           Genome reference file.'
     log.info '    --strelka2                     PATH           Strelka2 installation dir.'
+    log.info '    --tn_pairs                     FILE           Text file containing 2 columns: tumor=file name of tumor bams and normal=file name of normal bam (with colnames).'
     log.info ''
     log.info 'Optional arguments:'
     log.info '    --output_folder                FOLDER         Output folder (default: vf_output).'
     log.info '    --cpu                          INTEGER        Number of cpu to use with strelka2 (default=2).'
+    log.info '    --mem                          INTEGER        Memory to be used in GB (default=8).'
     log.info 'Flags:'
     log.info '    --help                                        Display this message'
     log.info ''
@@ -59,34 +61,84 @@ params.bam_folder = null
 params.downsampling_prop = null
 params.ref = null
 params.strelka2 = null
+params.tn_pairs = null
+params.output_folder = "calling_lowcovWES"
+params.cpu = 2
+params.mem = 8
 
-if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null){
-  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2 "
+if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null | params.tn_pairs == null ){
+  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
 }
 
-bams = Channel.fromPath( params.bam_folder+'/*.bam' )
-              .ifEmpty { error "Cannot find any bam file in: ${params.input_folder}" }
+fasta_ref = file(params.ref)
+fasta_ref_fai = file( params.ref+'.fai' )
 
-bais = Channel.fromPath( params.bam_folder+'/*.bai' )
-              .ifEmpty { error "Cannot find any bai file in: ${params.input_folder}" }
+pairs = Channel.fromPath(params.tn_pairs).splitCsv(header: true, sep: '\t', strip: true)
+  .map{ row -> [ file(params.bam_folder + "/" + row.tumor), file(params.bam_folder + "/" + row.tumor+'.bai'),
+                 file(params.bam_folder + "/" + row.normal), file(params.bam_folder + "/" + row.normal+'.bai') ] }
 
 process samtoolsDownsampling {
 
-  tag {bam_tag}
+  tag {bam_tag_t}
 
   input:
-  file bam from bams
-  file bai from bais
+  file pair from pairs
 
   output:
   file '*bam*' into ds_bambai
 
   shell:
-  bam_tag = bam.baseName
+  bam_tag_t = pair[0].baseName
+  bam_tag_n = pair[2].baseName
   '''
-  mkdir BAM_downsampled
-  samtools view -s 3.!{params.downsampling_prop} -b !{bam} -o !{bam_tag}_DS.bam
-  samtools index !{bam_tag}_DS.bam
-  '''
+  #samtools view -s 3.!{params.downsampling_prop} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
+  #samtools index !{bam_tag_t}_DS.bam
 
+  #samtools view -s 3.!{params.downsampling_prop} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
+  #samtools index !{bam_tag_n}_DS.bam
+
+  touch !{bam_tag_t}_DS.bam
+  touch !{bam_tag_t}_DS.bam.bai
+  touch !{bam_tag_n}_DS.bam
+  touch !{bam_tag_n}_DS.bam.bai
+  '''
+}
+
+process strelka2Somatic {
+
+     cpus params.cpu
+     memory params.mem+'GB'
+
+     tag {bam_tag_t}
+
+     publishDir params.output_folder, mode: 'copy'
+
+     input:
+     file pair from ds_bambai
+     file fasta_ref
+     file fasta_ref_fai
+
+     output:
+     file '*vcf.gz' into vcffiles
+     file '*bed.gz' optional true into regionfiles
+
+     shell:
+     bam_tag_t = pair[0].baseName
+     '''
+     !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --exome --runDir strelkaAnalysis
+     cd strelkaAnalysis
+     ./runWorkflow.py -m local -j !{params.cpu} -g !{params.mem}
+     cd ..
+     mv strelkaAnalysis/results/variants/* .
+     mv somatic.indels.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz
+     mv somatic.snvs.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz
+     mv somatic.indels.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz.tbi
+     mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
+     fixStrelkaOutput.sh *.vcf.gz
+     if [ -d "strelkaAnalysis/results/regions" ]; then
+          mv strelkaAnalysis/results/regions/* .
+          mv somatic.callable.regions.bed.gz !{pair[0]}_vs_!{pair[2]}.somatic.callable.regions.bed.gz
+          mv somatic.callable.regions.bed.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.callable.regions.bed.gz.tbi
+     fi
+     '''
 }
