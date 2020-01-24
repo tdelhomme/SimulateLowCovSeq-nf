@@ -77,6 +77,8 @@ pairs = Channel.fromPath(params.tn_pairs).splitCsv(header: true, sep: '\t', stri
   .map{ row -> [ file(params.bam_folder + "/" + row.tumor), file(params.bam_folder + "/" + row.tumor+'.bai'),
                  file(params.bam_folder + "/" + row.normal), file(params.bam_folder + "/" + row.normal+'.bai') ] }
 
+workflow = params.strelka2 + '/bin/configureStrelkaSomaticWorkflow.py'
+
 process samtoolsDownsampling {
 
   tag {bam_tag_t}
