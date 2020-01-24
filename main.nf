@@ -93,16 +93,11 @@ process samtoolsDownsampling {
   bam_tag_t = pair[0].baseName
   bam_tag_n = pair[2].baseName
   '''
-  #samtools view -s 3.!{params.downsampling_prop} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
-  #samtools index !{bam_tag_t}_DS.bam
+  samtools view -s 3.!{params.downsampling_prop} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
+  samtools index !{bam_tag_t}_DS.bam
 
-  #samtools view -s 3.!{params.downsampling_prop} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
-  #samtools index !{bam_tag_n}_DS.bam
-
-  touch !{bam_tag_t}_DS.bam
-  touch !{bam_tag_t}_DS.bam.bai
-  touch !{bam_tag_n}_DS.bam
-  touch !{bam_tag_n}_DS.bam.bai
+  samtools view -s 3.!{params.downsampling_prop} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
+  samtools index !{bam_tag_n}_DS.bam
   '''
 }
 
