@@ -79,7 +79,7 @@ process samtoolsDownsampling {
   file bai from bais
 
   output:
-  file("${bam_tag}*bam"), file("${bam_tag}*bai")  into ds_bambai
+  file '*bam*' into ds_bambai
 
   shell:
   bam_tag = bam.baseName
