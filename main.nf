@@ -41,28 +41,52 @@ if (params.help) {
     log.info 'nextflow run main.nf --learning --trainingTable table.txt --features AO,DP,QVAL'
     log.info ''
     log.info 'Mandatory arguments:'
-    log.info '    --learning AND/OR --scoring        STRING               Indicate which mode (learning or scoring) to run.'
-    log.info ''
-    log.info '    if --learning:'
-    log.info '      --trainingTable                  TXT                  File containing variant calls used to train the model. Must contain a column "status" if'
-    log.info '                                                            options --duplicatedSeqVCF and --duplicatedSeqCov are not provided.'
-    log.info '      --features                       LIST                 List of features used to train the model separated by commas, e.g. "--features AF,DP,RVSB".'
-    log.info '                                                            Features are predifined when running with option --needlestack.'
-    log.info '      if --replication'
-    log.info '        --duplicatedSeqVCF             VCF                  Variant calls from an other sequencing, used to assign status to trainingTable.'
-    log.info '        --duplicatedSeqCov             TXT                  File containing for each sequenced position in toTrainVCF the coverage in duplicatedSeq data'
-    log.info '                                                            for quality check. Use iarcbioinfo/mpileup-nf pipeline on BAM/BED used to generate --toTrainVCF.'
-    log.info ''
-    log.info '    if --scoring:'
-    log.info '      --targetTable                    TXT                  File containing variant calls on which models would be apply.'
-    log.info '    if --scoring without --learning:'
-    log.info '      --modelSNV                       RDATA                Variant calls from an other sequencing, used to assign status to toTrainTable.'
-    log.info '      --modelINDEL                     RDATA                File containing for each sequenced position in toTrainVCF the coverage in duplicatedSeq data'
+    log.info '    --bam_folder                   FOLDER         Input folder containing BAM files to downsample (should be indexed).'
+    log.info '    --downsampling_prop            INTEGER        Proportion of reads that will be randomly selected from the BAM (between 1 and 100).'
+    log.info '    --ref                          FILE           Genome reference file.'
+    log.info '    --strelka2                     PATH           Strelka2 installation dir.'
     log.info ''
     log.info 'Optional arguments:'
-    log.info '    --output_folder                    FOLDER               Output folder (default: vf_output).'
-    log.info '    --nsplit                           INTEGER              Split the input toTrainVCF to transform it into table in parallel.'
-    log.info '    --needlestack                      FLAG                 Specify that calling was launched with needlestack, to use predifined features.'
+    log.info '    --output_folder                FOLDER         Output folder (default: vf_output).'
+    log.info '    --cpu                          INTEGER        Number of cpu to use with strelka2 (default=2).'
+    log.info 'Flags:'
+    log.info '    --help                                        Display this message'
     log.info ''
     exit 0
+}
+
+params.bam_folder = null
+params.downsampling_prop = null
+params.ref = null
+params.strelka2 = null
+
+if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null){
+  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2 "
+}
+
+bams = Channel.fromPath( params.bam_folder+'/*.bam' )
+              .ifEmpty { error "Cannot find any bam file in: ${params.input_folder}" }
+
+bais = Channel.fromPath( params.bam_folder+'/*.bai' )
+              .ifEmpty { error "Cannot find any bai file in: ${params.input_folder}" }
+
+process samtoolsDownsampling {
+
+  tag {bam_tag}
+
+  input:
+  file bam from bams
+  file bai from bais
+
+  output:
+  file("${bam_tag}*bam"), file("${bam_tag}*bai")  into ds_bambai
+
+  shell:
+  bam_tag = bam.baseName
+  '''
+  mkdir BAM_downsampled
+  samtools view -s 3.!{params.downsampling_prop} -b !{bam} -o !{bam_tag}_DS.bam
+  samtools index !{bam_tag}_DS.bam
+  '''
+
 }
