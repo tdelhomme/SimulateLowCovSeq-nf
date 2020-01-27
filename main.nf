@@ -142,26 +142,3 @@ process strelka2Somatic {
      fi
      '''
 }
-
-process annovar {
-
-    input:
-    file vcf from vcffiles
-
-    output:
-    file "*multianno.txt" into annovar_output
-
-    shell:
-    sm = vcf.baseName
-    '''
-    convert2annovar.pl !{vcf} -format vcf4 -includeinfo -allsample -outfile all_variants
-    AVI=all_variants.TUMOR.avinput
-    # test emtpy sample annovar input
-    nb_var=\$(wc -l < $AVI)
-    if [ \$nb_var -gt 0 ]; then
-        table_annovar.pl -nastring NA -buildver !{params.genome} -remove -protocol refGene,avsnp150,exac03nontcga,gnomad_genome,gnomad_exome -operation g,f,f,f,f -otherinfo $AVI '!{params.avdb}'
-        # put back the columns names from the VCF file that annovar replaces with Otherinfo
-        # sed -i '1s/Otherinfo/CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNORMAL\tTUMOR/' ${AVI}.*_multianno.txt
-    fi
-    '''
-}
