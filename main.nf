@@ -46,11 +46,13 @@ if (params.help) {
     log.info '    --ref                          FILE           Genome reference file.'
     log.info '    --strelka2                     PATH           Strelka2 installation dir.'
     log.info '    --tn_pairs                     FILE           Text file containing 2 columns: tumor=file name of tumor bams and normal=file name of normal bam (with colnames).'
+    log.info '    --avdb                         PATH           Path to annovar database.'
     log.info ''
     log.info 'Optional arguments:'
-    log.info '    --output_folder                FOLDER         Output folder (default: vf_output).'
+    log.info '    --output_folder                FOLDER         Output folder (default: calling_lowcovWES).'
     log.info '    --cpu                          INTEGER        Number of cpu to use with strelka2 (default=2).'
     log.info '    --mem                          INTEGER        Memory to be used in GB (default=8).'
+    log.info '    --genome                       STRING         Reference genome version (default=hg38).'
     log.info 'Flags:'
     log.info '    --help                                        Display this message'
     log.info ''
@@ -65,6 +67,7 @@ params.tn_pairs = null
 params.output_folder = "calling_lowcovWES"
 params.cpu = 2
 params.mem = 8
+params.genome = "hg38"
 
 if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null | params.tn_pairs == null ){
   exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
@@ -116,13 +119,13 @@ process strelka2Somatic {
      file fasta_ref_fai
 
      output:
-     file '*vcf.gz' into vcffiles
+     file '*snvs.vcf.gz' into vcffiles
      file '*bed.gz' optional true into regionfiles
 
      shell:
      bam_tag_t = pair[0].baseName
      '''
-     !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --exome --runDir strelkaAnalysis
+     !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --exome --reportEVSFeatures --runDir strelkaAnalysis
      cd strelkaAnalysis
      ./runWorkflow.py -m local -j !{params.cpu} -g !{params.mem}
      cd ..
@@ -138,4 +141,27 @@ process strelka2Somatic {
           mv somatic.callable.regions.bed.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.callable.regions.bed.gz.tbi
      fi
      '''
+}
+
+process annovar {
+
+    input:
+    file vcf from vcffiles
+
+    output:
+    file "*multianno.txt" into annovar_output
+
+    shell:
+    sm = vcf.baseName
+    '''
+    convert2annovar.pl !{vcf} -format vcf4 -includeinfo -allsample -outfile all_variants
+    AVI=all_variants.TUMOR.avinput
+    # test emtpy sample annovar input
+    nb_var=\$(wc -l < $AVI)
+    if [ \$nb_var -gt 0 ]; then
+        table_annovar.pl -nastring NA -buildver !{params.genome} -remove -protocol refGene,avsnp150,exac03nontcga,gnomad_genome,gnomad_exome -operation g,f,f,f,f -otherinfo $AVI '!{params.avdb}'
+        # put back the columns names from the VCF file that annovar replaces with Otherinfo
+        sed -i '1s/Otherinfo/CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNORMAL\tTUMOR/' ${AVI}.*_multianno.txt
+    fi
+    '''
 }
