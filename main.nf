@@ -161,7 +161,7 @@ process annovar {
     if [ \$nb_var -gt 0 ]; then
         table_annovar.pl -nastring NA -buildver !{params.genome} -remove -protocol refGene,avsnp150,exac03nontcga,gnomad_genome,gnomad_exome -operation g,f,f,f,f -otherinfo $AVI '!{params.avdb}'
         # put back the columns names from the VCF file that annovar replaces with Otherinfo
-        sed -i '1s/Otherinfo/CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNORMAL\tTUMOR/' ${AVI}.*_multianno.txt
+        # sed -i '1s/Otherinfo/CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNORMAL\tTUMOR/' ${AVI}.*_multianno.txt
     fi
     '''
 }
