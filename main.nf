@@ -64,17 +64,20 @@ params.downsampling_prop = null
 params.ref = null
 params.strelka2 = null
 params.tn_pairs = null
+params.avdb = null
 params.output_folder = "calling_lowcovWES"
 params.cpu = 2
 params.mem = 8
 params.genome = "hg38"
 
-if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null | params.tn_pairs == null ){
+if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null | params.tn_pairs == null | params.avdb == null ){
   exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
 }
 
 fasta_ref = file(params.ref)
 fasta_ref_fai = file( params.ref+'.fai' )
+
+avdb = file(params.avdb)
 
 pairs = Channel.fromPath(params.tn_pairs).splitCsv(header: true, sep: '\t', strip: true)
   .map{ row -> [ file(params.bam_folder + "/" + row.tumor), file(params.bam_folder + "/" + row.tumor+'.bai'),
@@ -133,4 +136,25 @@ process strelka2Somatic {
      mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
      fixStrelkaOutput.sh *.vcf.gz
      '''
+}
+
+process annotation {
+
+    publishDir params.output_folder, mode: 'copy'
+
+    tag {vcf_tag}
+
+    input:
+    file vcf from vcffiles
+    file avdb
+
+    output:
+    file '*multianno.vcf.bgz' into bgzipvcfanno
+    file '*multianno.vcf.bgz.tbi' into tabixvcfanno
+
+    shell:
+    vcf_tag=vcf.baseName
+    '''
+    table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out myanno -remove -protocol refGene -operation g -nastring . -vcfinput
+    '''
 }
