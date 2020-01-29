@@ -111,8 +111,6 @@ process strelka2Somatic {
 
      tag {bam_tag_t}
 
-     publishDir params.output_folder, mode: 'copy'
-
      input:
      file pair from ds_bambai
      file fasta_ref
@@ -120,7 +118,6 @@ process strelka2Somatic {
 
      output:
      file '*snvs.vcf.gz' into vcffiles
-     file '*bed.gz' optional true into regionfiles
 
      shell:
      bam_tag_t = pair[0].baseName
@@ -135,10 +132,5 @@ process strelka2Somatic {
      mv somatic.indels.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz.tbi
      mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
      fixStrelkaOutput.sh *.vcf.gz
-     if [ -d "strelkaAnalysis/results/regions" ]; then
-          mv strelkaAnalysis/results/regions/* .
-          mv somatic.callable.regions.bed.gz !{pair[0]}_vs_!{pair[2]}.somatic.callable.regions.bed.gz
-          mv somatic.callable.regions.bed.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.callable.regions.bed.gz.tbi
-     fi
      '''
 }
