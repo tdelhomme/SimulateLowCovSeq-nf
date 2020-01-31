@@ -18,22 +18,6 @@ Nextflow pipeline to simulate low coverage WES from existing BAM files and call/
   |-----------|---------------|
   | bam_folder    | Input folder containing BAM files to downsample (should be indexed). |
 
-  Specify the test files location
-
-
-  log.info '    --bam_folder                   FOLDER         Input folder containing BAM files to downsample (should be indexed).'
-  log.info '    --downsampling_prop            INTEGER        Proportion of reads that will be randomly selected from the BAM (between 1 and 100).'
-  log.info '    --ref                          FILE           Genome reference file.'
-  log.info '    --strelka2                     PATH           Strelka2 installation dir.'
-  log.info '    --tn_pairs                     FILE           Text file containing 2 columns: tumor=file name of tumor bams and normal=file name of normal bam (with colnames).'
-  log.info '    --avdb                         PATH           Path to annovar database.'
-  log.info ''
-  log.info 'Optional arguments:'
-  log.info '    --output_folder                FOLDER         Output folder (default: calling_lowcovWES).'
-  log.info '    --cpu                          INTEGER        Number of cpu to use with strelka2 (default=2).'
-  log.info '    --mem                          INTEGER        Memory to be used in GB (default=8).'
-  log.info '    --genome                       STRING         Reference genome version (default=hg38).'
-
 
 ## Parameters
 
