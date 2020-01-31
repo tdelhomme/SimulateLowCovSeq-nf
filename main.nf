@@ -155,6 +155,8 @@ process annotation {
     shell:
     vcf_tag=vcf.baseName
     '''
-    table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out myanno -remove -protocol refGene -operation g -nastring . -vcfinput
+    table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene -operation g -nastring . -vcfinput
+    bgzip -c !{vcf_tag}.!{params.genome}_multianno.vcf > !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
+    tabix -p vcf !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
     '''
 }
