@@ -125,7 +125,7 @@ process strelka2Somatic {
      shell:
      bam_tag_t = pair[0].baseName
      '''
-     !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --exome --reportEVSFeatures --runDir strelkaAnalysis
+     !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --reportEVSFeatures --runDir strelkaAnalysis
      cd strelkaAnalysis
      ./runWorkflow.py -m local -j !{params.cpu} -g !{params.mem}
      cd ..
