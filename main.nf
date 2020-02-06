@@ -123,6 +123,7 @@ process strelka2Somatic {
 
      output:
      file '*snvs.vcf.gz' into vcffiles
+     file '*PASS.vcf' into passvcf
 
      shell:
      bam_tag_t = pair[0].baseName
