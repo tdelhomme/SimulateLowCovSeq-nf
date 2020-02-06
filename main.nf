@@ -138,7 +138,7 @@ process strelka2Somatic {
      mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
      fixStrelkaOutput.sh *.vcf.gz
 
-     vcf=`ls `*snvs.vcf.gz`
+     vcf=`ls *snvs.vcf.gz`
      bcftools view -f PASS ${vcf} > "${vcf/.vcf.gz}_PASS.vcf"
      '''
 }
