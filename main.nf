@@ -112,6 +112,8 @@ process strelka2Somatic {
      cpus params.cpu
      memory params.mem+'GB'
 
+     publishDir params.output_folder+"/PASS/", mode: 'copy', pattern: '*PASS.vcf'
+
      tag {bam_tag_t}
 
      input:
