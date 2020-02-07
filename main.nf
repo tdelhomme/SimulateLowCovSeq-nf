@@ -74,6 +74,8 @@ if(params.bam_folder == null | params.downsampling_prop == null |  params.ref ==
   exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
 }
 
+if(params.downsampling_prop < 10) { samtools_ds = "3.0"+params.downsampling_prop } else { samtools_ds = "3."+params.downsampling_prop }
+
 fasta_ref = file(params.ref)
 fasta_ref_fai = file( params.ref+'.fai' )
 
@@ -99,10 +101,10 @@ process samtoolsDownsampling {
   bam_tag_t = pair[0].baseName
   bam_tag_n = pair[2].baseName
   '''
-  samtools view -s 3.!{params.downsampling_prop} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
+  samtools view -s !{samtools_ds} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
   samtools index !{bam_tag_t}_DS.bam
 
-  samtools view -s 3.!{params.downsampling_prop} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
+  samtools view -s !{samtools_ds} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
   samtools index !{bam_tag_n}_DS.bam
   '''
 }
