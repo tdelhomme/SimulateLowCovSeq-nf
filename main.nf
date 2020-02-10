@@ -113,7 +113,7 @@ process samtoolsDownsampling {
   '''
 }
 
-if(params.no_calling != null){
+if(params.no_calling == null){
 
   process strelka2Somatic {
 
