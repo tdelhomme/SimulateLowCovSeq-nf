@@ -97,7 +97,7 @@ process samtoolsDownsampling {
   file pair from pairs
 
   output:
-  file '*bam*' into ds_bambai
+  file '*_DS.bam*' into ds_bambai
 
   shell:
   bam_tag_t = pair[0].baseName
