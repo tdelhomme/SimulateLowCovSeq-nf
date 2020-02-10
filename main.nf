@@ -54,6 +54,7 @@ if (params.help) {
     log.info '    --mem                          INTEGER        Memory to be used in GB (default=8).'
     log.info '    --genome                       STRING         Reference genome version (default=hg38).'
     log.info 'Flags:'
+    log.info '    --no_calling                                  Do not perform strelka2 variant calling and annotation'
     log.info '    --help                                        Display this message'
     log.info ''
     exit 0
@@ -69,6 +70,7 @@ params.output_folder = "calling_lowcovWES"
 params.cpu = 2
 params.mem = 8
 params.genome = "hg38"
+params.no_calling = null
 
 if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null | params.tn_pairs == null | params.avdb == null ){
   exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
@@ -111,62 +113,66 @@ process samtoolsDownsampling {
   '''
 }
 
-process strelka2Somatic {
+if(params.no_calling != null){
 
-     cpus params.cpu
-     memory params.mem+'GB'
+  process strelka2Somatic {
 
-     publishDir params.output_folder+"/PASS/", mode: 'copy', pattern: '*PASS.vcf'
+       cpus params.cpu
+       memory params.mem+'GB'
 
-     tag {bam_tag_t}
+       publishDir params.output_folder+"/PASS/", mode: 'copy', pattern: '*PASS.vcf'
 
-     input:
-     file pair from ds_bambai
-     file fasta_ref
-     file fasta_ref_fai
+       tag {bam_tag_t}
 
-     output:
-     file '*snvs.vcf.gz' into vcffiles
-     file '*PASS.vcf' into passvcf
+       input:
+       file pair from ds_bambai
+       file fasta_ref
+       file fasta_ref_fai
 
-     shell:
-     bam_tag_t = pair[0].baseName
-     '''
-     !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --reportEVSFeatures --runDir strelkaAnalysis
-     cd strelkaAnalysis
-     ./runWorkflow.py -m local -j !{params.cpu} -g !{params.mem}
-     cd ..
-     mv strelkaAnalysis/results/variants/* .
-     mv somatic.indels.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz
-     mv somatic.snvs.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz
-     mv somatic.indels.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz.tbi
-     mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
-     fixStrelkaOutput.sh *.vcf.gz
+       output:
+       file '*snvs.vcf.gz' into vcffiles
+       file '*PASS.vcf' into passvcf
 
-     vcf=`ls *snvs.vcf.gz`
-     bcftools view -f PASS ${vcf} > "${vcf/.vcf.gz}_PASS.vcf"
-     '''
-}
+       shell:
+       bam_tag_t = pair[0].baseName
+       '''
+       !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --reportEVSFeatures --runDir strelkaAnalysis
+       cd strelkaAnalysis
+       ./runWorkflow.py -m local -j !{params.cpu} -g !{params.mem}
+       cd ..
+       mv strelkaAnalysis/results/variants/* .
+       mv somatic.indels.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz
+       mv somatic.snvs.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz
+       mv somatic.indels.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz.tbi
+       mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
+       fixStrelkaOutput.sh *.vcf.gz
 
-process annotation {
+       vcf=`ls *snvs.vcf.gz`
+       bcftools view -f PASS ${vcf} > "${vcf/.vcf.gz}_PASS.vcf"
+       '''
+  }
 
-    publishDir params.output_folder, mode: 'copy'
+  process annotation {
 
-    tag {vcf_tag}
+      publishDir params.output_folder, mode: 'copy'
 
-    input:
-    file vcf from vcffiles
-    file avdb
+      tag {vcf_tag}
 
-    output:
-    file '*multianno.vcf.bgz' into bgzipvcfanno
-    file '*multianno.vcf.bgz.tbi' into tabixvcfanno
+      input:
+      file vcf from vcffiles
+      file avdb
 
-    shell:
-    vcf_tag=vcf.baseName
-    '''
-    table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene -operation g -nastring . -vcfinput
-    bgzip -c !{vcf_tag}.!{params.genome}_multianno.vcf > !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
-    tabix -p vcf !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
-    '''
+      output:
+      file '*multianno.vcf.bgz' into bgzipvcfanno
+      file '*multianno.vcf.bgz.tbi' into tabixvcfanno
+
+      shell:
+      vcf_tag=vcf.baseName
+      '''
+      table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene -operation g -nastring . -vcfinput
+      bgzip -c !{vcf_tag}.!{params.genome}_multianno.vcf > !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
+      tabix -p vcf !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
+      '''
+  }
+
 }
