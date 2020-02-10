@@ -89,6 +89,8 @@ workflow = params.strelka2 + '/bin/configureStrelkaSomaticWorkflow.py'
 
 process samtoolsDownsampling {
 
+  publishDir params.output_folder+"/BAM/", mode: 'copy', pattern: '*_DS.bam*'
+
   tag {bam_tag_t}
 
   input:
