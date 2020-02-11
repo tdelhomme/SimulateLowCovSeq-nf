@@ -44,6 +44,7 @@ Flags are special parameters without value.
 
 | Name      | Description     |
 |-----------|-----------------|
+| --no_calling    | Do not perform the strelka2 variant calling step and annotation |
 | --help    | Display help |
 
 
