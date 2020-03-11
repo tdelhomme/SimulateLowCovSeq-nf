@@ -169,7 +169,7 @@ if(params.no_calling == null){
       shell:
       vcf_tag=vcf.baseName
       '''
-      table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene -operation g -nastring . -vcfinput
+      table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene,exac03 -operation g,f -nastring . -vcfinput
       bgzip -c !{vcf_tag}.!{params.genome}_multianno.vcf > !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
       tabix -p vcf !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
       '''
