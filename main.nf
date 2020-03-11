@@ -72,8 +72,8 @@ params.mem = 8
 params.genome = "hg38"
 params.no_calling = null
 
-if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null & params.tn_pairs == null) | params.avdb == null ){
-  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, (--strelka2 and --tn_pairs) or --no_calling"
+if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null & params.tn_pairs == null & params.avdb == null) ){
+  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, (--strelka2 and --tn_pairs and --avdb) or --no_calling"
 }
 
 if(params.downsampling_prop < 10) { samtools_ds = "3.0"+params.downsampling_prop } else { samtools_ds = "3."+params.downsampling_prop }
@@ -118,7 +118,7 @@ if(params.no_calling == null){
 
 	  bams  = Channel.fromPath(params.bam_folder +'/*bam')
 
-    process samtoolsDownsampling {
+    process samtoolsDownsampling_calling {
 
     publishDir params.output_folder+"/BAM/", mode: 'copy', pattern: '*_DS.bam*'
 
