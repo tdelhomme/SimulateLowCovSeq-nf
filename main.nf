@@ -44,10 +44,10 @@ if (params.help) {
     log.info '    --bam_folder                   FOLDER         Input folder containing BAM files to downsample (should be indexed).'
     log.info '    --downsampling_prop            INTEGER        Proportion of reads that will be randomly selected from the BAM (between 1 and 100).'
     log.info '    --ref                          FILE           Genome reference file.'
-    log.info '    --tn_pairs                     FILE           Text file containing 2 columns: tumor=file name of tumor bams and normal=file name of normal bam (with colnames).'
     log.info '    --avdb                         PATH           Path to annovar database.'
     log.info ''
     log.info 'Optional arguments:'
+    log.info '    --tn_pairs                     FILE           Text file containing 2 columns: tumor=file name of tumor bams and normal=file name of normal bam (with colnames).'
     log.info '    --strelka2                     PATH           Strelka2 installation dir.'
     log.info '    --output_folder                FOLDER         Output folder (default: calling_lowcovWES).'
     log.info '    --cpu                          INTEGER        Number of cpu to use with strelka2 (default=2).'
@@ -72,8 +72,8 @@ params.mem = 8
 params.genome = "hg38"
 params.no_calling = null
 
-if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null) | params.tn_pairs == null | params.avdb == null ){
-  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
+if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null & params.tn_pairs == null) | params.avdb == null ){
+  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, (--strelka2 and --tn_pairs) or --no_calling"
 }
 
 if(params.downsampling_prop < 10) { samtools_ds = "3.0"+params.downsampling_prop } else { samtools_ds = "3."+params.downsampling_prop }
@@ -83,34 +83,60 @@ fasta_ref_fai = file( params.ref+'.fai' )
 
 avdb = file(params.avdb)
 
-pairs = Channel.fromPath(params.tn_pairs).splitCsv(header: true, sep: '\t', strip: true)
-  .map{ row -> [ file(params.bam_folder + "/" + row.tumor), file(params.bam_folder + "/" + row.tumor+'.bai'),
-                 file(params.bam_folder + "/" + row.normal), file(params.bam_folder + "/" + row.normal+'.bai') ] }
+if(params.no_calling == null){
+  pairs = Channel.fromPath(params.tn_pairs).splitCsv(header: true, sep: '\t', strip: true)
+    .map{ row -> [ file(params.bam_folder + "/" + row.tumor), file(params.bam_folder + "/" + row.tumor+'.bai'),
+                   file(params.bam_folder + "/" + row.normal), file(params.bam_folder + "/" + row.normal+'.bai') ] }
 
-workflow = params.strelka2 + '/bin/configureStrelkaSomaticWorkflow.py'
+  workflow = params.strelka2 + '/bin/configureStrelkaSomaticWorkflow.py'
 
-process samtoolsDownsampling {
 
-  publishDir params.output_folder+"/BAM/", mode: 'copy', pattern: '*_DS.bam*'
+  process samtoolsDownsampling {
 
-  tag {bam_tag_t}
+    publishDir params.output_folder+"/BAM/", mode: 'copy', pattern: '*_DS.bam*'
 
-  input:
-  file pair from pairs
+    tag {bam_tag_t}
 
-  output:
-  file '*_DS.bam*' into ds_bambai
+    input:
+    file pair from pairs
 
-  shell:
-  bam_tag_t = pair[0].baseName
-  bam_tag_n = pair[2].baseName
-  '''
-  samtools view -s !{samtools_ds} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
-  samtools index !{bam_tag_t}_DS.bam
+    output:
+    file '*_DS.bam*' into ds_bambai
 
-  samtools view -s !{samtools_ds} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
-  samtools index !{bam_tag_n}_DS.bam
-  '''
+    shell:
+    bam_tag_t = pair[0].baseName
+    bam_tag_n = pair[2].baseName
+    '''
+    samtools view -s !{samtools_ds} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
+    samtools index !{bam_tag_t}_DS.bam
+
+    samtools view -s !{samtools_ds} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
+    samtools index !{bam_tag_n}_DS.bam
+    '''
+  }
+} else {
+
+	  bams  = Channel.fromPath(params.bam_folder +'/*bam')
+
+    process samtoolsDownsampling {
+
+    publishDir params.output_folder+"/BAM/", mode: 'copy', pattern: '*_DS.bam*'
+
+    tag {bam_tag_t}
+
+    input:
+    file bam from bams
+
+    output:
+    file '*_DS.bam*' into ds_bambai
+
+    shell:
+    bam_tag =bam.baseName
+    '''
+    samtools view -s !{samtools_ds} -b !{bam} -o !{bam_tag}_DS.bam
+    samtools index !{bam_tag}_DS.bam
+    '''
+  }
 }
 
 if(params.no_calling == null){
@@ -169,7 +195,7 @@ if(params.no_calling == null){
       shell:
       vcf_tag=vcf.baseName
       '''
-      table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene,exac03 -operation g,f -nastring . -vcfinput
+      table_annovar.pl !{vcf} !{avdb} -buildver !{params.genome} -out !{vcf_tag} -remove -protocol refGene -operation g -nastring . -vcfinput
       bgzip -c !{vcf_tag}.!{params.genome}_multianno.vcf > !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
       tabix -p vcf !{vcf_tag}.!{params.genome}_multianno.vcf.bgz
       '''
