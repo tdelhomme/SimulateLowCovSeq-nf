@@ -44,11 +44,11 @@ if (params.help) {
     log.info '    --bam_folder                   FOLDER         Input folder containing BAM files to downsample (should be indexed).'
     log.info '    --downsampling_prop            INTEGER        Proportion of reads that will be randomly selected from the BAM (between 1 and 100).'
     log.info '    --ref                          FILE           Genome reference file.'
-    log.info '    --strelka2                     PATH           Strelka2 installation dir.'
     log.info '    --tn_pairs                     FILE           Text file containing 2 columns: tumor=file name of tumor bams and normal=file name of normal bam (with colnames).'
     log.info '    --avdb                         PATH           Path to annovar database.'
     log.info ''
     log.info 'Optional arguments:'
+    log.info '    --strelka2                     PATH           Strelka2 installation dir.'
     log.info '    --output_folder                FOLDER         Output folder (default: calling_lowcovWES).'
     log.info '    --cpu                          INTEGER        Number of cpu to use with strelka2 (default=2).'
     log.info '    --mem                          INTEGER        Memory to be used in GB (default=8).'
@@ -72,7 +72,7 @@ params.mem = 8
 params.genome = "hg38"
 params.no_calling = null
 
-if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  params.strelka2 == null | params.tn_pairs == null | params.avdb == null ){
+if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null) | params.tn_pairs == null | params.avdb == null ){
   exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, --strelka2, --tn_pairs"
 }
 
