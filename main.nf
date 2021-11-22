@@ -2,7 +2,7 @@
 
 //vim: syntax=groovy -*- mode: groovy;-*-
 
-// Copyright (C) 2020 IRB Barcelona
+// Copyright (C) 2021 IRB Barcelona
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 
 log.info ""
 log.info "-------------------------------------------------------------------------"
-log.info "  SimulateLcWES-nf: nextflow pipeline to simulate low coverage WES calling "
-log.info "          with strelka2 based on existing BAM files          "
+log.info "  SimulateLowCovSeq: nextflow pipeline to simulate low coverage seq data "
+log.info "          and run a calling with strelka2, based on existing BAM files   "
 log.info "-------------------------------------------------------------------------"
 log.info "Copyright (C) IRB Barcelona"
 log.info "This program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE"
@@ -61,22 +61,20 @@ if (params.help) {
 }
 
 params.bam_folder = null
-params.downsampling_prop = null
+params.target_coverage = null
 params.ref = null
 params.strelka2 = null
 params.tn_pairs = null
 params.avdb = null
-params.output_folder = "calling_lowcovWES"
+params.output_folder = "calling_LowCovSeq"
 params.cpu = 2
 params.mem = 8
 params.genome = "hg38"
 params.no_calling = null
 
-if(params.bam_folder == null | params.downsampling_prop == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null & params.tn_pairs == null & params.avdb == null) ){
-  exit 1, "Please specify each of the following parameters: --bam_folder, --downsampling_prop, --ref, (--strelka2 and --tn_pairs and --avdb) or --no_calling"
+if(params.bam_folder == null | params.target_coverage == null |  params.ref == null |  (params.strelka2 == null & params.no_calling == null & params.tn_pairs == null & params.avdb == null) ){
+  exit 1, "Please specify each of the following parameters: --bam_folder, --target_coverage, --ref, (--strelka2 and --tn_pairs and --avdb) or --no_calling"
 }
-
-if(params.downsampling_prop < 10) { samtools_ds = "3.0"+params.downsampling_prop } else { samtools_ds = "3."+params.downsampling_prop }
 
 fasta_ref = file(params.ref)
 fasta_ref_fai = file( params.ref+'.fai' )
@@ -107,9 +105,21 @@ if(params.no_calling == null){
     bam_tag_t = pair[0].baseName
     bam_tag_n = pair[2].baseName
     '''
+    declare -i meanreadlength
+    meanreadlength=`samtools view file.bam | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | awk 'BEGIN {total=0} {total += $1} END { print int(total/NR) }'`
+
+    declare -i numberreads
+    numberreads=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $3} END {print total}'`
+
+    declare -i lengthsequence
+    lengthsequence=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $2} END {print total}'`
+
+    meancov=$((meanreadlength * numberreads / lengthsequence))
+    targetcov=!{params.targetcoverage}
+    samtools_ds=$((meancov / targetcov))
+
     samtools view -s !{samtools_ds} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
     samtools index !{bam_tag_t}_DS.bam
-
     samtools view -s !{samtools_ds} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
     samtools index !{bam_tag_n}_DS.bam
     '''
@@ -133,6 +143,19 @@ if(params.no_calling == null){
     shell:
     bam_tag =bam.baseName
     '''
+    declare -i meanreadlength
+    meanreadlength=`samtools view file.bam | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | awk 'BEGIN {total=0} {total += $1} END { print int(total/NR) }'`
+
+    declare -i numberreads
+    numberreads=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $3} END {print total}'`
+
+    declare -i lengthsequence
+    lengthsequence=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $2} END {print total}'`
+
+    meancov=$((meanreadlength * numberreads / lengthsequence))
+    targetcov=!{params.targetcoverage}
+    samtools_ds=$((meancov / targetcov))
+    
     samtools view -s !{samtools_ds} -b !{bam} -o !{bam_tag}_DS.bam
     samtools index !{bam_tag}_DS.bam
     '''
