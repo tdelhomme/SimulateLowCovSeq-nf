@@ -127,7 +127,13 @@ if(params.no_calling == null){
       targetcov=!{params.target_coverage}
       samtools_ds=$((meancov / targetcov))
       echo "downsampling proportion: " $samtools_ds
+      
+      len=`expr length "$samtools_ds"`
+      if [ 2 -gt "$len" ]; then
+        samtools_ds=0$samtools_ds
+      fi
 
+      echo "command samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam"
       samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam
       samtools index !{bam_tag_t}_DS.bam
     done
