@@ -135,7 +135,7 @@ if(params.no_calling == null){
 
       echo "command samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam"
       samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam
-      samtools index !{bam_tag_t}_DS.bam
+      samtools index !{bam_tag}_DS.bam
     done
     '''
   }
