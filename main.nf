@@ -42,7 +42,7 @@ if (params.help) {
     log.info ''
     log.info 'Mandatory arguments:'
     log.info '    --bam_folder                   FOLDER         Input folder containing BAM files to downsample (should be indexed).'
-    log.info '    --downsampling_prop            INTEGER        Proportion of reads that will be randomly selected from the BAM (between 1 and 100).'
+    log.info '    --target_coverage              NUMBER         Target coverage for the downsampled BAM file.'
     log.info '    --ref                          FILE           Genome reference file.'
     log.info '    --avdb                         PATH           Path to annovar database.'
     log.info ''
@@ -105,23 +105,32 @@ if(params.no_calling == null){
     bam_tag_t = pair[0].baseName
     bam_tag_n = pair[2].baseName
     '''
-    declare -i meanreadlength
-    meanreadlength=`samtools view file.bam | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | awk 'BEGIN {total=0} {total += $1} END { print int(total/NR) }'`
+    tumorbam=!{pair[0]}
+    normalbam=!{pair[2]}
+    for inputbam in ${tumorbam} ${normalbam}
+    do
+      echo "Starting processing bam file: " ${inputbam}
+      bamtag=$(basename "$inputbam" | cut -d. -f1)
+      declare -i meanreadlength
+      meanreadlength=`samtools view ${inputbam} | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | awk 'BEGIN {total=0} {total += $1} END { print int(total/NR) }'`
+      echo "mean read length: " $meanreadlength
 
-    declare -i numberreads
-    numberreads=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $3} END {print total}'`
+      declare -i numberreads
+      numberreads=`samtools idxstats ${inputbam} | awk 'BEGIN {total=0} {total += $3} END {print total}'`
+      echo "total number of reads: " $numberreads
 
-    declare -i lengthsequence
-    lengthsequence=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $2} END {print total}'`
+      declare -i lengthsequence
+      lengthsequence=`samtools idxstats ${inputbam} | awk 'BEGIN {total=0} {total += $2} END {print total}'`
+      echo "total sequence length: " $lengthsequence
 
-    meancov=$((meanreadlength * numberreads / lengthsequence))
-    targetcov=!{params.targetcoverage}
-    samtools_ds=$((meancov / targetcov))
+      meancov=$((meanreadlength * numberreads / lengthsequence))
+      targetcov=!{params.target_coverage}
+      samtools_ds=$((meancov / targetcov))
+      echo "downsampling proportion: " $samtools_ds
 
-    samtools view -s !{samtools_ds} -b !{pair[0]} -o !{bam_tag_t}_DS.bam
-    samtools index !{bam_tag_t}_DS.bam
-    samtools view -s !{samtools_ds} -b !{pair[2]} -o !{bam_tag_n}_DS.bam
-    samtools index !{bam_tag_n}_DS.bam
+      samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam
+      samtools index !{bam_tag_t}_DS.bam
+    done
     '''
   }
 } else {
@@ -145,18 +154,22 @@ if(params.no_calling == null){
     '''
     declare -i meanreadlength
     meanreadlength=`samtools view file.bam | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | awk 'BEGIN {total=0} {total += $1} END { print int(total/NR) }'`
+    echo "mean read length: " $meanreadlength
 
     declare -i numberreads
     numberreads=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $3} END {print total}'`
+    echo "total number of reads: " $numberreads
 
     declare -i lengthsequence
     lengthsequence=`samtools idxstats file.bam | awk 'BEGIN {total=0} {total += $2} END {print total}'`
+    echo "total sequence length: " $lengthsequence
 
     meancov=$((meanreadlength * numberreads / lengthsequence))
-    targetcov=!{params.targetcoverage}
+    targetcov=!{params.target_coverage}
     samtools_ds=$((meancov / targetcov))
+    echo "final downsample proportion: " $samtools_ds
     
-    samtools view -s !{samtools_ds} -b !{bam} -o !{bam_tag}_DS.bam
+    samtools view -s 42.${samtools_ds} -b !{bam} -o !{bam_tag}_DS.bam
     samtools index !{bam_tag}_DS.bam
     '''
   }
