@@ -128,7 +128,8 @@ if(params.no_calling == null){
       targetcov=!{params.target_coverage}
       echo "requested target coverage: " $targetcov
       # samtools_ds=$((100 / (meancov / targetcov)))
-      samtools_ds=`Rscript ../nextflow_pipelines/SimulateLowCovSeq-nf/bin/compute_downsampling_proportion.R $meancov $targetcov`
+      ${baseDir}=!{baseDir}
+      samtools_ds=`Rscript  ${baseDir}/bin/compute_downsampling_proportion.R $meancov $targetcov`
       echo "downsampling proportion in percent: " $samtools_ds
       
       len=`expr length "$samtools_ds"`
