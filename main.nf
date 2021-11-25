@@ -124,8 +124,11 @@ if(params.no_calling == null){
       echo "total sequence length: " $lengthsequence
 
       meancov=$((meanreadlength * numberreads / lengthsequence))
+      echo "estimated mean coverage: " $meancov
       targetcov=!{params.target_coverage}
-      samtools_ds=$((100 / (meancov / targetcov)))
+      echo "requested target coverage: " $targetcov
+      # samtools_ds=$((100 / (meancov / targetcov)))
+      samtools_ds=`Rscript ../nextflow_pipelines/SimulateLowCovSeq-nf/bin/compute_downsampling_proportion.R $meancov $targetcov`
       echo "downsampling proportion in percent: " $samtools_ds
       
       len=`expr length "$samtools_ds"`
