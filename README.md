@@ -50,7 +50,7 @@ Flags are special parameters without value.
 
 ## Usage
   ```
-  nextflow run tdelhomme/SimulateLcWES-nf --bam_folder BAM/ --downsampling_prop 20 --strelka2 /opt/anaconda3/envs/strelka/share/strelka-2.9.10-0 --ref /data/genome_references/GRCh38.d1.vd1.fa --tn_pairs pairs.txt --genome hg38
+  nextflow run tdelhomme/SimulateLowCovSeq-nf --bam_folder BAM/ --downsampling_prop 20 --strelka2 /opt/anaconda3/envs/strelka/share/strelka-2.9.10-0 --ref /data/genome_references/GRCh38.d1.vd1.fa --tn_pairs pairs.txt --genome hg38
   ```
 
 ## Output
