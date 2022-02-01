@@ -99,7 +99,7 @@ if(params.no_calling == null){
     file pair from pairs
 
     output:
-    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("normal*.bai") into ds_bambai
+    set val(bam_tag_t), file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("normal*.bai") into ds_bambai
 
     shell:
     bam_tag_t = pair[0].baseName
@@ -158,7 +158,7 @@ if(params.no_calling == null){
     file bam from bams
 
     output:
-    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("normal*.bai") into ds_bambai
+    file '*DS.bam*' into ds_bambai
 
     shell:
     bam_tag =bam.baseName
@@ -198,7 +198,7 @@ if(params.no_calling == null){
        tag {bam_tag_t}
 
        input:
-       file pair from ds_bambai
+       set val(tumor_id), file(tumor_bamds), file(tumor_baids), file(normal_bamds), file(normal_baids) from ds_bambai
        file fasta_ref
        file fasta_ref_fai
 
@@ -207,17 +207,17 @@ if(params.no_calling == null){
        file '*PASS.vcf' into passvcf
 
        shell:
-       bam_tag_t = pair[0].baseName
+       bam_tag_t = tumor_id
        '''
-       !{workflow} --tumorBam !{pair[0]} --normalBam !{pair[2]} --referenceFasta !{fasta_ref} --reportEVSFeatures --runDir strelkaAnalysis
+       !{workflow} --tumorBam !{tumor_bamds} --normalBam !{normal_bamds} --referenceFasta !{fasta_ref} --reportEVSFeatures --runDir strelkaAnalysis
        cd strelkaAnalysis
        ./runWorkflow.py -m local -j !{params.cpu} -g !{params.mem}
        cd ..
        mv strelkaAnalysis/results/variants/* .
-       mv somatic.indels.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz
-       mv somatic.snvs.vcf.gz !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz
-       mv somatic.indels.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.indels.vcf.gz.tbi
-       mv somatic.snvs.vcf.gz.tbi !{pair[0]}_vs_!{pair[2]}.somatic.snvs.vcf.gz.tbi
+       mv somatic.indels.vcf.gz !{tumor_bamds}_vs_!{normal_bamds}.somatic.indels.vcf.gz
+       mv somatic.snvs.vcf.gz !{tumor_bamds}_vs_!{normal_bamds}.somatic.snvs.vcf.gz
+       mv somatic.indels.vcf.gz.tbi !{tumor_bamds}_vs_!{normal_bamds}.somatic.indels.vcf.gz.tbi
+       mv somatic.snvs.vcf.gz.tbi !{tumor_bamds}_vs_!{normal_bamds}.somatic.snvs.vcf.gz.tbi
        fixStrelkaOutput.sh *.vcf.gz
 
        vcf=`ls *snvs.vcf.gz`
