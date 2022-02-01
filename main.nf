@@ -99,7 +99,7 @@ if(params.no_calling == null){
     file pair from pairs
 
     output:
-    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("norma*.bai") into ds_bambai
+    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("normal*.bai") into ds_bambai
 
     shell:
     bam_tag_t = pair[0].baseName
@@ -158,7 +158,7 @@ if(params.no_calling == null){
     file bam from bams
 
     output:
-    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("norma*.bai") into ds_bambai
+    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("normal*.bai") into ds_bambai
 
     shell:
     bam_tag =bam.baseName
