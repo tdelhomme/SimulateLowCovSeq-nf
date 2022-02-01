@@ -99,7 +99,7 @@ if(params.no_calling == null){
     file pair from pairs
 
     output:
-    file '*_DS.bam*' into ds_bambai
+    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("norma*.bai") into ds_bambai
 
     shell:
     bam_tag_t = pair[0].baseName
@@ -110,6 +110,7 @@ if(params.no_calling == null){
     for inputbam in ${tumorbam} ${normalbam}
     do
       echo "Starting processing bam file: " ${inputbam}
+      if [[ "$inputbam" == "$tumorbam" ]]; then pref=tumor; else pref=normal; fi
       bamtag=$(basename "$inputbam" | cut -d. -f1)
       declare -i meanreadlength
       meanreadlength=`samtools view ${inputbam} | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | awk 'BEGIN {total=0} {total += $1} END { print int(total/NR) }'`
@@ -138,8 +139,8 @@ if(params.no_calling == null){
       fi
 
       echo "command samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam"
-      samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${bamtag}_DS.bam
-      samtools index ${bamtag}_DS.bam
+      samtools view -s 42.${samtools_ds} -b ${inputbam} -o ${pref}_${bamtag}_DS.bam
+      samtools index ${pref}_${bamtag}_DS.bam
     done
     '''
   }
@@ -157,7 +158,7 @@ if(params.no_calling == null){
     file bam from bams
 
     output:
-    file '*_DS.bam*' into ds_bambai
+    file("tumor*.bam"), file("tumor*.bai"), file("normal*.bam"), file("norma*.bai") into ds_bambai
 
     shell:
     bam_tag =bam.baseName
