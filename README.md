@@ -33,7 +33,7 @@ Nextflow pipeline to simulate low coverage WES from existing BAM files and call/
   * #### Optional
 | Name      | Default value | Description     |
 |-----------|---------------|-----------------|
-| --output_folder   |      calling_lowcovWES | Output folder  |
+| --output_folder   |      calling_LowCovSeq | Output folder  |
 | --cpu    |      2 | Number of cpu to use with strelka2 |
 | --mem    |      8 | Memory to be used in GB  |
 | --genome    |      hg38 | Reference genome version |
