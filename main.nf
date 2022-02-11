@@ -91,7 +91,6 @@ if(params.no_calling == null){
 
   process samtoolsDownsampling {
 
-    publishDir params.output_folder+"/BAM/", mode: 'copy', pattern: '*_DS.bam*'
 
     tag {bam_tag_t}
 
